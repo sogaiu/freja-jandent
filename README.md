@@ -10,7 +10,7 @@ The [freja editor](https://github.com/saikyun/freja).
 ## Setup
 
 0. Clone this repository somewhere and cd to the resulting directory
-1. Start freja with: `freja ./freja-jandent/indent.janet`
+1. Start freja with: `freja ./freja-jandent/jandent-format.janet`
 2. `Control+L` to load the file
 
 ## Example Usage
