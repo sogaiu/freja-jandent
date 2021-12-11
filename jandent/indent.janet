@@ -2,10 +2,8 @@
 
 ### hint for comprehension
 ###
-### understand the following line in `fmt-1` and everything
-### that exists to support it:
-###
-###   (unless (= node "\n") (flushwhite))
+### study the call to `flushwhite` in `fmt-1` and everything
+### that exists to support it
 
 (defn pnode
   "Make a capture function for a node."
@@ -52,7 +50,9 @@
                  ,(fn [& args]
                     (def ws (get args 0))
                     (cond
-                      bi
+                      (and bi
+                           (= 2 (length args))
+                           (not= "\n" (get args 1)))
                       [:ws-bi ws]
                       #
                       (= 1 (length args))
@@ -444,14 +444,18 @@
       (fmt-1-recur nf))
     (fmt-1-recur form))
 
+  (var before-first-nl true)
+
   (defn fmt-1
     [node]
     # insert appropriate whitespace
-    (unless (= node "\n") (flushwhite)) # KEY LINE!
+    (when (and (not= "\n" node)
+               (not= :ws-tr (get node 0)))
+      (flushwhite))
     # node-specific "emission"
     (match node
       "\n" (newline)
-      [:ws-bi x] (prin "")
+      [:ws-bi x] (prin (if before-first-nl x ""))
       [:ws x] (emit x)
       [:ws-tr x] (prin x)
       [:comment x] (emit "#" x)
@@ -471,7 +475,8 @@
       [:struct xs] (emit-body "{" xs "}")
       [:table xs] (emit-body "@{" xs "}")
       [:rmform [rm nfs form]] (emit-rmform rm nfs form)
-      [:top xs] (emit-body "" xs "")))
+      [:top xs] (emit-body "" xs ""))
+    (set before-first-nl false))
 
   (set fmt-1-recur fmt-1)
   (fmt-1 tree)
