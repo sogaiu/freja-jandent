@@ -71,12 +71,11 @@
         :symchars (choice (range "09" "AZ" "az" "\x80\xFF")
                           (set "!$%&*+-./:<?=>@^_"))
         :token (some :symchars)
-        :hex (range "09" "af" "AF")
         :escape
         (sequence "\\" (choice (set "ntrzfev0\"\\")
-                               (sequence "x" (repeat 2 :hex))
-                               (sequence "u" (repeat 4 :hex))
-                               (sequence "U" (repeat 6 :hex))
+                               (sequence "x" (2 :h))
+                               (sequence "u" (4 :h))
+                               (sequence "U" (6 :h))
                                (error (constant "bad hex escape"))))
         :comment (replace (sequence "#"
                                     (capture (to (choice "\n" -1))))
@@ -167,49 +166,41 @@
 (comment
 
   (make-tree "# hello\n")
-  # => '(:top @[(:comment " hello") "\n"])
+  # =>
+  '(:top @[(:comment " hello") "\n"])
 
-  (deep=
-    #
-    (make-tree "(+ 1 1)")
-    #
-    '(:top
-       @[(:ptuple
-           @[(:span "+") (:ws " ")
-             (:span "1") (:ws " ")
-             (:span "1")])]))
-  # => true
+  (make-tree "(+ 1 1)")
+  # =>
+  '(:top
+     @[(:ptuple
+         @[(:span "+") (:ws " ")
+           (:span "1") (:ws " ")
+           (:span "1")])])
 
-  (deep=
-    #
-    (make-tree " (+ 1 1) ")
-    #
-    '(:top
-       @[(:ws-bi " ")
-         (:ptuple
-           @[(:span "+") (:ws " ")
-             (:span "1") (:ws " ")
-             (:span "1")])
-         (:ws-tr " ")]))
-  # => true
+  (make-tree " (+ 1 1) ")
+  # =>
+  '(:top
+     @[(:ws-bi " ")
+       (:ptuple
+         @[(:span "+") (:ws " ")
+           (:span "1") (:ws " ")
+           (:span "1")])
+       (:ws-tr " ")])
 
-  (deep=
-    #
-    (make-tree
-      (string "(comment\n"
-              "\n"
-              "  :hi\n"
-              "  #\n"
-              "  )"))
-    #
-    '(:top
-       @[(:ptuple
-           @[(:span "comment") "\n"
-             "\n"
-             (:ws-bi "  ") (:span ":hi") "\n"
-             (:ws-bi "  ") (:comment "") "\n"
-             (:ws-bi "  ")])]))
-  # => true
+  (make-tree
+    (string "(comment\n"
+            "\n"
+            "  :hi\n"
+            "  #\n"
+            "  )"))
+  # =>
+  '(:top
+     @[(:ptuple
+         @[(:span "comment") "\n"
+           "\n"
+           (:ws-bi "  ") (:span ":hi") "\n"
+           (:ws-bi "  ") (:comment "") "\n"
+           (:ws-bi "  ")])])
 
   )
 
@@ -256,19 +247,24 @@
 (comment
 
   (first-non-ws-is-nl? ["\n" [:ws " "]])
-  # => true
+  # =>
+  true
 
   (first-non-ws-is-nl? [[:ws " "] "\n" [:ws " "]])
-  # => true
+  # =>
+  true
 
   (first-non-ws-is-nl? [[:ws-bi " "] "\n" [:ws " "]])
-  # => true
+  # =>
+  true
 
   (first-non-ws-is-nl? [[:ws-tr " "] "\n" [:ws " "]])
-  # => true
+  # =>
+  true
 
   (first-non-ws-is-nl? [[:comment " hi"] "\n" [:ws " "]])
-  # => false
+  # =>
+  false
 
   )
 
@@ -383,7 +379,7 @@
   (var fmt-1-recur nil)
 
   (defn emit-body
-    [open xs close &opt delta]
+    [open xs close &opt delta top]
     (def od-col col)
     (emit open)
     #
@@ -392,15 +388,16 @@
     (dropwhite)
     (dedent)
     # XXX: messy part
-    (cond
-      # empty container case
-      (and (has-nl? xs) (zero? (length (non-nls xs))))
-      (emit (string/repeat " " (+ od-col 1)))
-      # XXX: actually want alignment with opening delimiter
-      #      of 2nd non-ws, non-comment child?
-      (zero? col)
-      (emit (string/repeat " "
-                           (+ od-col 1 (or delta 0)))))
+    (when (not top)
+      (cond
+        # empty container case
+        (and (has-nl? xs) (zero? (length (non-nls xs))))
+        (emit (tracev (string/repeat " " (+ od-col 1))))
+        # XXX: actually want alignment with opening delimiter
+        #      of 2nd non-ws, non-comment child?
+        (zero? col)
+        (emit (string/repeat " "
+                             (+ od-col 1 (or delta 0))))))
     #
     (emit close))
 
@@ -444,8 +441,6 @@
       (fmt-1-recur nf))
     (fmt-1-recur form))
 
-  (var before-first-nl true)
-
   (defn fmt-1
     [node]
     # insert appropriate whitespace
@@ -455,7 +450,7 @@
     # node-specific "emission"
     (match node
       "\n" (newline)
-      [:ws-bi x] (prin (if before-first-nl x ""))
+      [:ws-bi x] (prin "")
       [:ws x] (emit x)
       [:ws-tr x] (prin x)
       [:comment x] (emit "#" x)
@@ -475,8 +470,7 @@
       [:struct xs] (emit-body "{" xs "}")
       [:table xs] (emit-body "@{" xs "}")
       [:rmform [rm nfs form]] (emit-rmform rm nfs form)
-      [:top xs] (emit-body "" xs ""))
-    (set before-first-nl false))
+      [:top xs] (emit-body "" xs "" nil true)))
 
   (set fmt-1-recur fmt-1)
   (fmt-1 tree)
