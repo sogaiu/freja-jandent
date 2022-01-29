@@ -2,7 +2,7 @@
 (import freja/state)
 (import freja/default-hotkeys :as dh)
 
-(import ../jandent/indent :as fmt)
+(import ./jandent/indent :as fmt)
 
 # XXX: for investigation
 (defn current-gb

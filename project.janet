@@ -4,3 +4,5 @@
   :repo "git+https://github.com/sogaiu/freja-jandent"
   :dependencies ["https://github.com/saikyun/freja"])
 
+(declare-source
+  :source ["freja-jandent"])
