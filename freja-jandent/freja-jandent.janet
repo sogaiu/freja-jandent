@@ -18,7 +18,3 @@
   (gb/replace-content gb new-text)
   (gb/put-caret gb caret))
 
-(dh/set-key dh/gb-binds
-            [:control :shift :f]
-            (comp dh/reset-blink jandent-format))
-
